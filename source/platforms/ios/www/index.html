@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+-->
+<html>
+    <head>
+	<meta http-equiv="Content-Language" content="th" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="format-detection" content="telephone=no">
+	<meta name="msapplication-tap-highlight" content="no">
+	<meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+	<link rel="stylesheet" href="css/bootstrap.min.css" >
+        <style>
+            body{
+                font-size:0.8em !important;
+            }
+			.no-padding {
+				padding-right: 0 !important;
+				padding-left: 0 !important;
+			}
+			.form-control,.input-group-addon,.btn{
+				border-radius: 0px !important;
+			}
+			.btnsubmit{
+				width:100%;
+			}
+        </style>
+    </head>
+    <body>
+        <header>
+		
+		</header>
+		
+		<div class="container">
+			<div class="row">
+				<div class="col-xs-12">
+				<h3>บันทึกรายรับ-รายจ่าย</h1>
+				<table class="table table-striped">
+				  <thead>
+					<tr>
+					  <th>ปี /เดือน/วัน</th>
+					  <th>รายการ</th>
+					  <th>รายรับ</th>
+					  <th>รายจ่าย</th>
+					  <th>คงเหลือ</th>
+					</tr>
+				  </thead>
+				  <tbody id="tblDiv">
+				  
+				  </tbody>
+				</table>
+				</div>
+            </div>
+            
+			<form class="col-xs-12">
+					<div class="form-group row">
+						   <div class="col-xs-4 no-padding">
+							   <select class="form-control" id="txtType">
+								   <option value="รายรับ">รายรับ</option>
+								   <option value="รายจ่าย" selected>รายจ่าย</option>
+							   </select>
+						   </div>
+						   <div class="col-xs-8 no-padding">
+							   <input type="text" class="form-control" id="txtDescription" name="" placeholder="รายการ"/>
+						   </div>
+					</div>
+
+					<div class="form-group row">
+					
+						<div class="col-xs-8 no-padding">
+								<div class="input-group">
+									<div class="input-group-addon">฿</div>
+										<input type="number" class="form-control" id="txtAmount" placeholder="จำนวนเงิน" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
+								</div>
+						</div>
+								<div class="col-xs-4 no-padding">
+										<button type="submit" class="btn btn-primary btnsubmit" onclick="goInsert()">save</button>
+								</div>
+					</div>
+			</form>
+		
+			<div class="col-xs-4">
+					<button type="submit" class="btn btn-primary " onclick="goClear()">Delete</button>
+			</div>
+								
+		</div>
+        
+		
+        <footer>
+		
+		</footer>
+		
+		<script type="text/javascript" src="cordova.js"></script>	
+		<script>
+      
+        document.addEventListener("deviceready", onDeviceReady, false);
+
+	    function onDeviceReady() {
+            var db = window.openDatabase("NoteAccountDB", "1.0", "NoteAccount DB", 200000);
+            db.transaction(populateDB, errorCB, successCB);
+        }
+		
+        function populateDB(tx) {
+            tx.executeSql('CREATE TABLE IF NOT EXISTS NoteAccountTB (Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, Type,Description,Amount INTEGER,Total INTEGER,Add_Date TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL)');
+        }
+		
+		function errorCB(err) {
+            alert("Error processing SQL: "+err.code);
+        }
+
+        function successCB() {
+            var db = window.openDatabase("NoteAccountDB", "1.0", "NoteAccount DB", 200000);
+            db.transaction(queryDB, errorCB);
+        }
+
+        function queryDB(tx) {
+            tx.executeSql('SELECT * , date(Add_Date) as DateOnly , time(Add_Date) as TimeOnly FROM NoteAccountTB', [], querySuccess, errorCB);
+        }
+
+		function querySuccess(tx, results) {
+		
+            var tblText='';
+			
+            var len = results.rows.length;
+			
+            for (var i = 0; i < len; i++) {
+			
+                tblText +='<tr><td>'
+						+ results.rows.item(i).DateOnly +'</td><td>'
+						+ results.rows.item(i).Description +'</td><td>'
+						+ (results.rows.item(i).Type=="รายรับ"? results.rows.item(i).Amount : "") +'</td><td>' 
+						+ (results.rows.item(i).Type=="รายจ่าย"? results.rows.item(i).Amount : "") +'</td><td>' 
+						+ results.rows.item(i).Total +'</td></tr>';				
+            }
+			
+            document.getElementById("tblDiv").innerHTML =tblText;
+			
+        }
+     
+        function insertDB(tx) {
+		
+			var amonut = parseInt(document.getElementById("txtAmount").value);
+			var typex = document.getElementById("txtType").value;
+			var desc = document.getElementById("txtDescription").value;
+			var d = new Date();
+			if(typex=="รายจ่าย"){
+				amonut = parseInt( 0 - amonut );
+			}			
+			
+
+            tx.executeSql('INSERT INTO NoteAccountTB (Type,Description,Amount,Add_Date) VALUES ('
+					+'"'+ typex +'",'
+					+'"'+ desc +'",'
+					+ amonut + ','
+					+'DATETIME(\'NOW\'))');
+
+			 tx.executeSql('UPDATE NoteAccountTB '
+							+ 'SET Total = ( SELECT SUM(Amount) FROM NoteAccountTB ) '
+							+ 'WHERE Id IN ( SELECT max(Id) FROM NoteAccountTB ) ');	
+
+		}
+
+		function deleteRow(tx) {
+          tx.executeSql('DELETE FROM NoteAccountTB', [], queryDB, errorCB);
+        }
+	
+        function goInsert() {
+		
+			var amonut = document.getElementById("txtAmount").value;
+			var desc = document.getElementById("txtDescription").value;
+			if(amonut !="" &&  desc !=""){
+				var db = window.openDatabase("NoteAccountDB", "1.0", "NoteAccount DB", 200000);
+				db.transaction(insertDB, errorCB, successCB);
+			}else{
+				navigator.notification.alert(
+						'Please Input Information',  
+						alertDismissed,         
+						'ALERT',            
+						'Done'  
+					);
+			}
+			
+        }
+			
+		function goClear() {
+            var db = window.openDatabase("NoteAccountDB", "1.0", "NoteAccount DB", 200000);
+            db.transaction(deleteRow, errorCB);
+        }
+		
+		
+		function alertDismissed() {
+		
+		}
+
+					
+
+
+		</script>
+		
+    </body>
+</html>
